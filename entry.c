@@ -1,68 +1,65 @@
 #include <stdbool.h>
 #include "mailbox.h"
+#include "blink.h"
+#include "print.h"
 #include "uart.h"
-#include "gui.h"
-
-char * hex_range="0123456789ABCDEF";
-
-void print (char * s, void (*print_func) (char s)) {
-	int i = 0;
-	while(s[i] != 0)
-		print_func(s[i++]);
-}
-
-void print_num(unsigned int num, void (*print_func) (char s)) {
-	        print("0x", print_func);
-	        int positions = 7;
-	        while (positions >= 0) {
-			print_func(hex_range[(num >> (positions * 4)) & 0b1111]);
-	                positions--;
-	        }
-	        print_func('\n');
-}
-
-void print_pair(char * s, unsigned int num) {
-        print(s, uart_print);
-        print(": ", uart_print);
-        print_num(num, uart_print);
-
-        print(s, gui_print);
-        print(": ", gui_print);
-        print_num(num, gui_print);
-
-}
+#include "fb.h"
+#include "blink.h"
 
 void c_entry() {
+	blink(3);
+
 	print("Hello world!\n", uart_print);
-	unsigned int init_result = init_fb(&framebuffer);
-	unsigned short * fb = framebuffer.pointer;
+
+	unsigned int init_result = fb_init();
+
+	if (init_result == 1) {
+		wait(4);
+		blink(4);
+	} else {
+		wait(4);
+		blink(8);
+	}
+
+	if (fb != (unsigned short *)0) {
+		wait(4);
+		blink(2);
+	} else {
+		wait(4);
+		blink(8);
+	}
 
 	// simple way to make an interesting looking background
 	for (unsigned short i=0; i < framebuffer.pwidth; i++) {
-		for (unsigned short j=0; j < framebuffer.pwidth; j++) {
+		for (unsigned short j=0; j < framebuffer.pheight; j++) {
 			fb[i*j]=i;
 		}
 	}
 
-	print_pair("Init result", init_result);
-	print_pair("Framebuffer pointer", (unsigned int) fb);
+	print_pair("\nInit result", init_result);
+
+	print_pair("Framebuffer pointer", (unsigned int) framebuffer.pointer);
 	print_pair("pwidth", framebuffer.pwidth);
 	print_pair("pheight", framebuffer.pheight);
 	print_pair("vwidth", framebuffer.vwidth);
 	print_pair("vheight", framebuffer.vheight);
 	print_pair("pitch", framebuffer.pitch);
+	print_pair("depth", framebuffer.depth);
 	print_pair("offsetx", framebuffer.offsetx);
 	print_pair("offsety", framebuffer.offsety);
 	print_pair("size", framebuffer.size);
 
-	print("\"The quick brown fox jumps over the lazy dog.\"\n", gui_print);
-	print("'THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.'\n", gui_print);
-	print("0123456789\n", gui_print);
-	print("0123456789\n", gui_print);
-	print("!@#$%^&*()-_=+[]{}|/\\:;\"'<>,.\n", gui_print);
+	print("\"The quick brown fox jumps over the lazy dog.\"\n", fb_print);
+	print("'THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.'\n", fb_print);
+	print("0123456789\n", fb_print);
+	print("0123456789\n", fb_print);
+	print("!@#$%^&*()-_=+[]{}|/\\:;\"'<>,.\n", fb_print);
 	fixedWidth = false;
-	print("!@#$%^&*()-_=+[]{}|/\\:;\"'<>,.\n", gui_print);
-	print("\"The quick brown fox jumps over the lazy dog.\"\n", gui_print);
-	print("'THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.'\n", gui_print);
+	print("!@#$%^&*()-_=+[]{}|/\\:;\"'<>,.\n", fb_print);
+	print("\"The quick brown fox jumps over the lazy dog.\"\n", fb_print);
+	print("'THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.'\n", fb_print);
+
+	wait(4);
+	blink(6);
 }
 

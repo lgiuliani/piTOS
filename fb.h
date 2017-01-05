@@ -12,8 +12,11 @@ extern struct {
 	unsigned int offsety;
 	unsigned short * pointer;
 	unsigned int size;
-} framebuffer;
+} volatile framebuffer;
 
-void gui_print(char ch);
+extern volatile unsigned short * fb;
+
+extern unsigned int fb_init();
+extern void fb_print(char ch);
 
 extern bool fixedWidth;

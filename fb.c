@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include "mailbox.h"
+#include "blink.h"
 
 struct {
 	unsigned int pwidth;
@@ -12,9 +13,11 @@ struct {
 	unsigned int offsety;
 	unsigned short * pointer;
 	unsigned int size;
-} __attribute__ ((aligned(16))) framebuffer = {
-	400, 300, 400, 300, 0, 16, 0, 0, (unsigned short *) 0, 0
+} __attribute__ ((aligned(16))) volatile framebuffer = {
+	640, 480, 640, 480, 0, 16, 0, 0, (unsigned short *) 0, 0
 };
+
+unsigned short * fb;
 
 unsigned int chars_encoded[] = {
 	// special characters
@@ -33,7 +36,28 @@ unsigned int offsetx = 0;
 unsigned int offsety = 0;
 bool fixedWidth = true;
 
-void gui_print(char ch) {
+unsigned int fb_exchange() {
+	unsigned int message = (unsigned int) &framebuffer;
+	message += 0xC0000000; // this is where the video chip sees the physical memory
+	unsigned int channel = 1;
+	wait(4);
+	blink(5);
+	mailbox_write(message|channel);
+	wait(4);
+	blink(5);
+	return mailbox_read(channel);
+}
+
+unsigned int fb_init() {
+	unsigned int result = fb_exchange();
+	//if(result == 1 && framebuffer.pointer != (unsigned short *)0) fb = framebuffer.pointer;
+	if(result == 1 && framebuffer.pointer != (unsigned short *)0) fb = (unsigned short *) (((unsigned int) framebuffer.pointer) - 0xC0000000);
+	return result;
+
+
+}
+
+void fb_print(char ch) {
 	if (ch < 32) {
 		if (ch == '\n') {
 			offsetx = 0;
@@ -65,7 +89,7 @@ void gui_print(char ch) {
 		if (width == 3) encoded = encoded << 1;
 		for (int j=0; j<width;j++) {
 			if (encoded & (0x1 << 31)) {
-				framebuffer.pointer[((i+offsety) * framebuffer.pwidth) + (j+offsetx)] = 0xFFFF;
+				fb[((i+offsety) * framebuffer.pwidth) + (j+offsetx)] = 0xFFFF;
 			}
 			encoded = encoded << 1;
 		}
