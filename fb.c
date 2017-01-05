@@ -90,6 +90,10 @@ void fb_print(char ch) {
 		for (int j=0; j<width;j++) {
 			if (encoded & (0x1 << 31)) {
 				fb[((i+offsety) * framebuffer.pwidth) + (j+offsetx)] = 0xFFFF;
+				// For some reason the above variant does not appear on screen on hardware,
+				// even though painting the background (or anything else) in a similar fashion does work.
+				// It still beats me why. For now, just also write it to fb+0xC0000000 (which in turn Qemu doesn't pick up):
+				framebuffer.pointer[((i+offsety) * framebuffer.pwidth) + (j+offsetx)] = 0xFFFF;
 			}
 			encoded = encoded << 1;
 		}
