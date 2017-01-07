@@ -32,6 +32,10 @@ unsigned int chars_encoded[] = {
        	0x81e8fa10, 0x80f8bc21, 0x01e8c210, 0x00e8383e, 0x210e422e, 0x0118c62e, 0x0118c544, 0x0118d771, 0x01151151, 0x8118bc4c, 0x01f1111f, 0x0e426087, 0x48421084, 0x38420c9c, 0x1b600000, 0x2aaaaaaa
 };
 
+// NOTE: these vars get into the .bss section, which
+// on real hardware is notoriously uninitialized.
+// (it's either that or cache plays really weird tricks on them)
+// So the real initialization is done in fb_init instead.
 unsigned int offsetx = 0;
 unsigned int offsety = 0;
 bool fixedWidth = true;
@@ -52,6 +56,11 @@ unsigned int fb_init() {
 	unsigned int result = fb_exchange();
 	//if(result == 1 && framebuffer.pointer != (unsigned short *)0) fb = framebuffer.pointer;
 	if(result == 1 && framebuffer.pointer != (unsigned short *)0) fb = (unsigned short *) (((unsigned int) framebuffer.pointer) - 0xC0000000);
+
+	offsetx = 0;
+	offsety=0;
+	fixedWidth=true;
+
 	return result;
 
 
@@ -90,10 +99,6 @@ void fb_print(char ch) {
 		for (int j=0; j<width;j++) {
 			if (encoded & (0x1 << 31)) {
 				fb[((i+offsety) * framebuffer.pwidth) + (j+offsetx)] = 0xFFFF;
-				// For some reason the above variant does not appear on screen on hardware,
-				// even though painting the background (or anything else) in a similar fashion does work.
-				// It still beats me why. For now, just also write it to fb+0xC0000000 (which in turn Qemu doesn't pick up):
-				framebuffer.pointer[((i+offsety) * framebuffer.pwidth) + (j+offsetx)] = 0xFFFF;
 			}
 			encoded = encoded << 1;
 		}

@@ -36,7 +36,7 @@ void c_entry() {
 		}
 	}
 
-	print_pair("\nInit result", init_result);
+	print_pair("Init result", init_result);
 
 	print_pair("Framebuffer pointer", (unsigned int) framebuffer.pointer);
 	print_pair("pwidth", framebuffer.pwidth);
