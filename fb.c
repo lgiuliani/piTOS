@@ -2,6 +2,13 @@
 #include "mailbox.h"
 #include "blink.h"
 
+/**
+ * We still request the framebuffer through its own channel.
+ * Alternatively it can be configured through the property tags interface.
+ * (See USB, where the property tags interface has become required.)
+ *
+ * TODO: volatile is likely unnecessary because we use our own barriers in assembly.
+ */
 struct {
 	unsigned int pwidth;
 	unsigned int pheight;
@@ -13,7 +20,7 @@ struct {
 	unsigned int offsety;
 	unsigned short * pointer;
 	unsigned int size;
-} __attribute__ ((aligned(16))) volatile framebuffer = {
+} MB_ALIGN volatile framebuffer = {
 	640, 480, 640, 480, 0, 16, 0, 0, (unsigned short *) 0, 0
 };
 

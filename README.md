@@ -27,8 +27,8 @@ build of Qemu was required.
 The Makefile assumes the presence of the 'arm-none-eabi' version of GCC
 and other tools (naming on your system may vary from Debian's).
 
-Not yet present is the initialisation of the USB Controller, which in
-turn is required to read the keyboard.
+An initial probing of USB hardware is currently present. It does nothing
+too interesting as of yet. Also, it currently hangs on Qemu.
 
 
 Troubleshooting
@@ -47,7 +47,7 @@ raspi1 (0x20xxxxxxx) instead of raspi2 (0x3fxxxxxx).
 
 (Note: if you want to port this back to raspi1 / zero, be aware that variants
 on this base address are currently scattered all over the code. Also see
-blink.c , as the IO locations for the LED have also changed between versions.)
+blink.c , as the IO addresses for the LED have also changed between versions.)
 
 
 No video output
@@ -57,24 +57,3 @@ It would appear that a resolution of 640x480 is a lowest common denominator.
 You can even enforce it through the bootstrapper using hdmi_safe=1 , but I
 didn't have to fall back to that myself.
 
-
-Known issues
-============
-
-On Qemu, the mailbox simply accepts a pointer to the framebuffer struct,
-wherever it may reside. However, on real hardware you have to add an
-offset of 0x40000000 (if l2 cache is enabled in config.txt, which it isn't with
-me) or 0xC0000000 (if l2 cache is disabled).
-
-At least, this is according to https://github.com/raspberrypi/firmware/wiki/Accessing-mailboxes
-
-If you add such an offset on Qemu, everything works fine provided that you
-subtract that same offset from the fb pointer that you obtained through the
-mailbox.
-
-On real hardware, something weirder occurs. Somehow, the original pointer
-responds well to my text routines, while the pointer-with-subtraction can show
-the background. I fail to get both working at the same time, even though they
-use the exact same mechanism to access the framebuffer.
-
-This still puzzles me.

@@ -1,0 +1,2 @@
+#disable_l2cache=1
+

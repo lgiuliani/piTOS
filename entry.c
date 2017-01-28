@@ -5,6 +5,8 @@
 #include "uart.h"
 #include "fb.h"
 #include "blink.h"
+#include "props.h"
+#include "usb.h"
 
 void c_entry() {
 	blink(3);
@@ -59,7 +61,10 @@ void c_entry() {
 	print("\"The quick brown fox jumps over the lazy dog.\"\n", fb_print);
 	print("'THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.'\n", fb_print);
 
-	wait(4);
-	blink(6);
+	print_pair_dec("Arm clock speed", props_4_8(GET_CLOCK_SPEED, 3));
+	print_pair_dec("Max clock speed", props_4_8(GET_MAX_CLOCK_SPEED, 3));
+	print_pair_dec("Core clock speed", props_4_8(GET_CLOCK_SPEED, 4));
+	print_pair_dec("Max clock speed", props_4_8(GET_MAX_CLOCK_SPEED, 4));
+	usb_init();
 }
 

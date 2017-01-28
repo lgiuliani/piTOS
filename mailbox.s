@@ -2,7 +2,7 @@
 1:
 	mcr	p15, 0, ip, c7, c5, 0	@ Flush mem cache so that we get a fresh poll read
 	ldr	r2, [r1, #0x18]		@ load mailbox status register into r1
-	tst	r2, \bit		@ check if bit 31 is clear
+	tst	r2, \bit		@ check if bit 'bit' (31 or 30) is clear
 	bne	1			@ if not, poll again
 	dmb				@ Data Memory Barrier: ensure that acquiring the lock runs before setting the data
 	mcr	p15, 0, ip, c7, c10, 5	@ DMB using MCR
@@ -13,7 +13,7 @@
 
 .global mailbox_write
 mailbox_write:	@r0 = message including channel (arg)
-	mov	ip, #0			@ use 'ip' scratch register for the 'mcr' macros
+	mov	ip, #0			@ use 'ip' scratch register for the 'mcr' calls
 	ldr	r1, =0x3F00B880		@ load mailbox base address
 	poll	#1 << 31
 	str	r0, [r1, #0x20]		@ set message (note: r0 is source!)
@@ -23,7 +23,7 @@ mailbox_write:	@r0 = message including channel (arg)
 
 .global mailbox_read
 mailbox_read:	@r0 = channel (arg), message including channel (return value)
-	mov	ip, #0			@ use 'ip' scratch register for the 'mcr' macros
+	mov	ip, #0			@ use 'ip' scratch register for the 'mcr' calls
 	ldr	r1, =0x3F00B880		@ load mailbox base address
 	poll	#1 << 30
 	ldr	r2, [r1, #0]		@ get message
