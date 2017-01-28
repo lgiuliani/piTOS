@@ -44,7 +44,7 @@ void hcd_reset() {
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 void usb_init() {
 	// disable interrupts
-	usb_io[AHB] &= ~(1 <<0); // 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
+	usb_io[AHB] &= ~(1 <<0); // Interrupt enable on 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
 	usb_io[INTERRUPT_MASK] = 0; // interrupt mask
 
 	print_assert("Turning on USB HCD", props8(SET_POWER_STATE, 3, 1), 1);
@@ -58,19 +58,16 @@ void usb_init() {
 	usb_io[USB] |= (1 << 4); // ModeSelect = UTMI
 	//hcd_reset();
 
-	print_pair("Hardware directions", usb_io[HW_DIRECTIONS]);
 	print_pair("Hardware settings 1", usb_io[HW_SETTINGS1]);
-	print_pair("Hardware settings 2", usb_io[HW_SETTINGS2]);
-	print_pair("Hardware settings 3", usb_io[HW_SETTINGS3]);
 
 	// Ensure we have the expected (rpi2 specific) hardware params,
 	// so that setting derived params later will be successful
 
-	print_assert("Architecture (should be 2 == internal dma)", (usb_io[HW_SETTINGS1] >> 24) & 0b11, 2);
+	print_assert("Architecture (should be 2 == internal dma)", (usb_io[HW_SETTINGS1] >> 3) & 0b11, 2);
 
 	print_assert("HighSpeedPhysical (should be 1 == utmi)", (usb_io[HW_SETTINGS1] >> 6) & 0b11, 1);
-	print_assert("Ulpifsls", (usb_io[USB] & 17) != 0, 0); // = Freescale Stack (?)
-	print_assert("ulpi_clk_sus_m", (usb_io[USB] & 19) != 0, 0);
+	print_assert("Ulpifsls", (usb_io[USB] & (1 << 17)) != 0, 0); // = Freescale Stack (?)
+	print_assert("ulpi_clk_sus_m", (usb_io[USB] & (1 << 19)) != 0, 0);
 
 	usb_io[AHB] |= (1 << 5) | (1 << 23); // DMA enable / DMA Remainder mode Incremental
 
