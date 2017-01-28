@@ -15,20 +15,14 @@ void c_entry() {
 
 	unsigned int init_result = fb_init();
 
-	if (init_result == 1) {
+	if (init_result != 1) {
 		wait(4);
-		blink(4);
-	} else {
-		wait(4);
-		blink(8);
+		blink(3);
 	}
 
-	if (fb != (unsigned short *)0) {
+	if (fb == (unsigned short *)0) {
 		wait(4);
-		blink(2);
-	} else {
-		wait(4);
-		blink(8);
+		blink(4);
 	}
 
 	// simple way to make an interesting looking background

@@ -24,28 +24,43 @@ void print_num_dec(unsigned int num, void (* print_func) (char s)) {
 	print_func(hex_range[num % 10]);
 }
 
+void print_pair_on(char * s, unsigned int num, void (* print_func) (char s)) {
+	print(s, print_func);
+	print(": ", print_func);
+	print_num(num, print_func);
+	print("\n", print_func);
+}
+
+void print_pair_dec_on(char * s, unsigned int num, void (* print_func) (char s)) {
+	print(s, print_func);
+	print(": ", print_func);
+	print_num_dec(num, print_func);
+	print("\n", print_func);
+}
+
 void print_pair(char * s, unsigned int num) {
-        print(s, uart_print);
-        print(": ", uart_print);
-        print_num(num, uart_print);
-	print("\n", uart_print);
-
-        print(s, fb_print);
-        print(": ", fb_print);
-        print_num(num, fb_print);
-	print("\n", fb_print);
-
+	print_pair_on(s, num, uart_print);
+	print_pair_on(s, num, fb_print);
 }
 
 void print_pair_dec(char * s, unsigned int num) {
-        print(s, uart_print);
-        print(": ", uart_print);
-        print_num_dec(num, uart_print);
-	print("\n", uart_print);
+	print_pair_dec_on(s, num, uart_print);
+	print_pair_dec_on(s, num, fb_print);
+}
 
-        print(s, fb_print);
-        print(": ", fb_print);
-        print_num_dec(num, fb_print);
-	print("\n", fb_print);
+void print_assert_on(char * s, unsigned int num, unsigned int val, void (* print_func) (char s)) {
+	print("ERROR: assertion failed: ", print_func);
+	print(s, print_func);
+	print(". Expected: ", print_func);
+	print_num(val, print_func);
+	print(", got: ", print_func);
+	print_num(num, print_func);
+	print("\n", print_func);
+}
 
+void print_assert(char * s, unsigned int num, unsigned int val) {
+	if (num != val) {
+		print_assert_on(s, num, val, uart_print);
+		print_assert_on(s, num, val, fb_print);
+	}
 }

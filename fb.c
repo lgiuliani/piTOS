@@ -61,6 +61,7 @@ unsigned int fb_exchange() {
 
 unsigned int fb_init() {
 	unsigned int result = fb_exchange();
+	// TODO this conditional translate-back can probably go. Issues with qemu vs hardware were resolved otherwise (it was an alignment problem)
 	//if(result == 1 && framebuffer.pointer != (unsigned short *)0) fb = framebuffer.pointer;
 	if(result == 1 && framebuffer.pointer != (unsigned short *)0) fb = (unsigned short *) (((unsigned int) framebuffer.pointer) - 0xC0000000);
 
@@ -69,8 +70,6 @@ unsigned int fb_init() {
 	fixedWidth=true;
 
 	return result;
-
-
 }
 
 void fb_print(char ch) {

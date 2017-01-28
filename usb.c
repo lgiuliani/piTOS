@@ -5,40 +5,26 @@
 
 volatile unsigned int * usb_io = (unsigned int *) 0x3F980000;
 
+const unsigned int OTG_CONTROL = 0x00 / 4;
+const unsigned int AHB = 0X04 / 4; // 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
 const unsigned int USB = 0X0C / 4;
 const unsigned int RESET = 0x10 / 4;
+const unsigned int INTERRUPT_MASK = 0x18 / 4;
+const unsigned int RECEIVE_SIZE = 0x24 / 4;
+const unsigned int NP_FIFO_START_ADDRESS_AND_DEPTH = 0x28 / 4;
+const unsigned int HW_DIRECTIONS = 0x44 / 4;
+const unsigned int HW_SETTINGS1 = 0x48 / 4;
+const unsigned int HW_SETTINGS2 = 0x4C / 4;
+const unsigned int HW_SETTINGS3 = 0x50 / 4;
+const unsigned int P_FIFO_START_ADDRESS_AND_DEPTH = 0x0100 / 4;
+const unsigned int PORT = 0x0440 / 4;
+const unsigned int CONFIG = 0x0e00 / 4;
+const unsigned int POWER = 0x0e00 / 4;
 
-/*
-static struct taglist {
-	struct props_header props_header;
-	struct prop_header prop_header;
-	// value
-	unsigned int domain; // 3 = USB HCD
-	unsigned int state; // 1 = on
-	// end tag
-	unsigned int end_tag; // 0 = end
-} MB_ALIGN taglist = {
-	{sizeof(struct taglist), 0}, {0x00028001, 8, 0}, 3, 1, 0
-};*/
+const unsigned int FIFO_SIZE = 20480;
 
-void hcd_on() {
-	print_pair("USB power-on state", props8(SET_POWER_STATE, 3, 1));
-	/*
-	unsigned int message = (unsigned int) & taglist;
-	//message += 0xC0000000; // shouldn't be necessary here
-	print_pair("USB power-on message address", message);
-	mailbox_write(message|8); // Enable USB HID chip(?) on mailbox 8 (property interface)
-	// TODO the below is required on real hardware. Better install a proper barrier instruction instead
-	wait(4);
-	blink(5);
-	print_pair("As returned (should be the same)", mailbox_read(8));
-	print_pair("req_resp_code (should be 0x80000000)", taglist.props_header.req_resp_code);
-	print_pair("req_resp_ind (should be 0x80000008)", taglist.prop_header.req_resp_ind); // = MSB for 'ok' + resp length in bytes
-	print_pair("state (should be 0x00000001)", taglist.state);
-	*/
-}
-
-// TODO Qemu gets stuck here (usb and reset are all zeroes); what does Linux do different?
+// TODO Qemu gets stuck here, likely because USB emulation is not properly enabled
+// See https://www.raspberrypi.org/forums/viewtopic.php?t=44761&p=355407
 void hcd_reset() {
 	print_pair("usb", usb_io[USB]);
 	print_pair("reset", usb_io[RESET]);
@@ -54,25 +40,72 @@ void hcd_reset() {
 	print_pair("RESET", usb_io[RESET]);
 }
 
+/** Basically setting a lot of properties in USB IO memory */
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 void usb_init() {
 	// disable interrupts
-	usb_io[0x04 / 4] &= ~(1 <<0); // 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
-	usb_io[0x18 / 4] = 0; // interrupt mask
+	usb_io[AHB] &= ~(1 <<0); // 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
+	usb_io[INTERRUPT_MASK] = 0; // interrupt mask
 
-	// turn on USB HCD	
-	hcd_on();
+	print_assert("Turning on USB HCD", props8(SET_POWER_STATE, 3, 1), 1);
 
-	// tweak some stuff (don't ask me)
+	// (end of 'init', begin of 'start')
+
 	usb_io[USB] &= ~((1 << 20) | (1 << 22)); // disable 'ulpi drive external vbus' and 'ts dline pulse enable'
 	// TODO is this initial reset required?
 	//hcd_reset();
-	usb_io[USB] &= ~(1 << 3); // disable 'physical interface'
+	usb_io[USB] &= ~(1 << 3); // disable 'phy interface'
 	usb_io[USB] |= (1 << 4); // ModeSelect = UTMI
-	hcd_reset();
+	//hcd_reset();
 
-	print_pair("Hardware (check for high speed phyisical settings)", usb_io[0x44 / 4]);
-	print_pair("Usb (match above with these)", usb_io[USB]);
+	print_pair("Hardware directions", usb_io[HW_DIRECTIONS]);
+	print_pair("Hardware settings 1", usb_io[HW_SETTINGS1]);
+	print_pair("Hardware settings 2", usb_io[HW_SETTINGS2]);
+	print_pair("Hardware settings 3", usb_io[HW_SETTINGS3]);
+
+	// Ensure we have the expected (rpi2 specific) hardware params,
+	// so that setting derived params later will be successful
+
+	print_assert("Architecture (should be 2 == internal dma)", (usb_io[HW_SETTINGS1] >> 24) & 0b11, 2);
+
+	print_assert("HighSpeedPhysical (should be 1 == utmi)", (usb_io[HW_SETTINGS1] >> 6) & 0b11, 1);
+	print_assert("Ulpifsls", (usb_io[USB] & 17) != 0, 0); // = Freescale Stack (?)
+	print_assert("ulpi_clk_sus_m", (usb_io[USB] & 19) != 0, 0);
+
+	usb_io[AHB] |= (1 << 5) | (1 << 23); // DMA enable / DMA Remainder mode Incremental
+
+
+	print_assert("Operating mode (0 = HNP and SRP capable)", (usb_io[HW_SETTINGS1] >> 0) & 0b111, 0);
+	print_assert("HNP Capable", (usb_io[USB] & (1 << 8)) != 0, 1);
+	print_assert("SRP Capable", (usb_io[USB] & (1 << 9)) != 0, 1);
+
+	usb_io[POWER] = 0; // enable all
+
+	// This assert is a repetition from above
+	print_assert("HighSpeedPhysical (should be 1 == utmi)", (usb_io[HW_SETTINGS1] >> 6) & 0b11, 1);
+	usb_io[CONFIG] &= ~0b11; // Clock speed = 0b00 = 30 - 60 mhz
+	usb_io[CONFIG] |= (1 << 2); // Fsls only = 1
+
+	// FIFO setup
+	print_pair("Default FIFO Size", usb_io[RECEIVE_SIZE]);
+	print_pair("Default Non-Periodic FIFO host size and depth", usb_io[NP_FIFO_START_ADDRESS_AND_DEPTH]);
+	print_pair("Default Periodic FIFO host size and depth", usb_io[P_FIFO_START_ADDRESS_AND_DEPTH]);
+	// Defaults should show FIFO size of 1000 and host size of 100.
+	// I suggest stick with the defaults unless we understand why we need something else
+
+	usb_io[OTG_CONTROL] |= (1 << 10); // Host set HNP Enable
+
+	// TODO HDC transmit FIFO flush, HCD receive FIFO flush
+	//
+	print_pair("Host config enable DMA descriptor", (usb_io[CONFIG] & (1 << 23)) != 0); // TODO 'if' when this one is 0 (it is)
+	
+	usb_io[PORT] |= (1 << 12); // power = 1
+	usb_io[PORT] |= (1 << 8); // reset = true
+	// micro delay
+	wait(1);
+	usb_io[PORT] &= ~(1 << 8); // reset = false again
+
+	print_pair("At end of 'start'", 0); // just log something to say we got here
 }
 #pragma GCC diagnostic pop
 
