@@ -10,7 +10,7 @@ all: $(OBJS)
 	arm-none-eabi-objcopy -O binary drupelet.elf drupelet.bin
 
 clean:
-	rm *.o *.elf # *.bin
+	rm *.o *.elf *.bin
 
 run:
 	qemu-system-arm -M raspi2 -bios drupelet.bin -serial stdio #-dtb ../raspbian/boot/bcm2709-rpi-2-b.dtb
