@@ -43,11 +43,9 @@ done myself, so YMMV.
 
 On previous versions of Qemu, I have experienced trouble using the _-serial stdio_
 option, but it may simply have been that I used the (gp)io base address of
-raspi1 (0x20xxxxxxx) instead of raspi2 (0x3fxxxxxx).
-
-(Note: if you want to port this back to raspi1 / zero, be aware that variants
-on this base address are currently scattered all over the code. Also see
-blink.c , as the IO addresses for the LED have also changed between versions.)
+raspi1 (0x20xxxxxxx) instead of raspi2 (0x3fxxxxxx). At any rate, you can change
+the overall base address in iobase.h . Just be aware that the built-in LED
+address has also changed between hardware versions.
 
 
 No video output

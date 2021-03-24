@@ -1,3 +1,5 @@
+#include "iobase.h"
+
 .macro	poll, bit
 1:
 	mcr	p15, 0, ip, c7, c5, 0	@ Flush mem cache so that we get a fresh poll read
@@ -14,7 +16,7 @@
 .global mailbox_write
 mailbox_write:	@r0 = message including channel (arg)
 	mov	ip, #0			@ use 'ip' scratch register for the 'mcr' calls
-	ldr	r1, =0x3F00B880		@ load mailbox base address
+	ldr	r1, =(IOBASE+0x0000B880)		@ load mailbox base address
 	poll	#1 << 31
 	str	r0, [r1, #0x20]		@ set message (note: r0 is source!)
 	dsb				@ Data Synchronization Barrier: perform after write to shared resource
@@ -24,7 +26,7 @@ mailbox_write:	@r0 = message including channel (arg)
 .global mailbox_read
 mailbox_read:	@r0 = channel (arg), message including channel (return value)
 	mov	ip, #0			@ use 'ip' scratch register for the 'mcr' calls
-	ldr	r1, =0x3F00B880		@ load mailbox base address
+	ldr	r1, =(IOBASE+0x0000B880)		@ load mailbox base address
 	poll	#1 << 30
 	ldr	r2, [r1, #0]		@ get message
 	and	r3, r2,#0b1111		@ extract channel

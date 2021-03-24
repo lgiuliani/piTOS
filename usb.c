@@ -2,8 +2,9 @@
 #include "blink.h"
 #include "print.h"
 #include "props.h"
+#include "iobase.h"
 
-volatile unsigned int * usb_io = (unsigned int *) 0x3F980000;
+volatile unsigned int * usb_io = (unsigned int *) (IOBASE + 0x00980000);
 
 const unsigned int OTG_CONTROL = 0x00 / 4;
 const unsigned int AHB = 0X04 / 4; // 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
@@ -47,6 +48,7 @@ void usb_init() {
 	usb_io[AHB] &= ~(1 <<0); // Interrupt enable on 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
 	usb_io[INTERRUPT_MASK] = 0; // interrupt mask
 
+	print_pair("sizeof int", sizeof(unsigned int));
 	print_assert("Turning on USB HCD", props8(SET_POWER_STATE, 3, 1), 1);
 
 	// (end of 'init', begin of 'start')
