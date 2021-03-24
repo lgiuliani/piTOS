@@ -7,7 +7,7 @@
 volatile unsigned int * usb_io = (unsigned int *) (IOBASE + 0x00980000);
 
 const unsigned int OTG_CONTROL = 0x00 / 4;
-const unsigned int AHB = 0X04 / 4; // 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
+const unsigned int AHB = 0X08 / 4; // 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
 const unsigned int USB = 0X0C / 4;
 const unsigned int RESET = 0x10 / 4;
 const unsigned int INTERRUPT_MASK = 0x18 / 4;
@@ -30,6 +30,7 @@ void hcd_reset() {
 	print_pair("usb", usb_io[USB]);
 	print_pair("reset", usb_io[RESET]);
 	while ((usb_io[RESET] & (1 << 31)) == 0) { // 'master idle' should become true
+		
 	}
 	print_pair("Reset", usb_io[RESET]);
 
@@ -40,6 +41,28 @@ void hcd_reset() {
 	}
 	print_pair("RESET", usb_io[RESET]);
 }
+
+void hcd_transmit_fifo_flush(int n) {
+	usb_io[RESET] = 0;
+	usb_io[RESET] |= n << 6; // 5-bit number, where 16= flush all
+	usb_io[RESET] |= 1 << 5; // transmit fifo flush
+	
+	print_pair("Transmit fifo flush", usb_io[RESET]);
+	while ((usb_io[RESET] & (1<<5)) != 0) {
+	}
+	print_pair("Transmit fifo flush done", usb_io[RESET]);
+}
+
+void hcd_receive_fifo_flush() {
+	usb_io[RESET] = 0;
+	usb_io[RESET] |= 1<<4; // receive fifo flush
+
+	print_pair("Receive fifo flush", usb_io[RESET]);
+	while ((usb_io[RESET] & (1<<4)) != 0) {
+	}
+	print_pair("Receive fifo flush done", usb_io[RESET]);
+}
+
 
 /** Basically setting a lot of properties in USB IO memory */
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -55,10 +78,10 @@ void usb_init() {
 
 	usb_io[USB] &= ~((1 << 20) | (1 << 22)); // disable 'ulpi drive external vbus' and 'ts dline pulse enable'
 	// TODO is this initial reset required?
-	//hcd_reset();
+	hcd_reset();
 	usb_io[USB] &= ~(1 << 3); // disable 'phy interface'
 	usb_io[USB] |= (1 << 4); // ModeSelect = UTMI
-	//hcd_reset();
+	hcd_reset();
 
 	print_pair("Hardware settings 1", usb_io[HW_SETTINGS1]);
 
@@ -74,9 +97,13 @@ void usb_init() {
 	usb_io[AHB] |= (1 << 5) | (1 << 23); // DMA enable / DMA Remainder mode Incremental
 
 
-	print_assert("Operating mode (0 = HNP and SRP capable)", (usb_io[HW_SETTINGS1] >> 0) & 0b111, 0);
-	print_assert("HNP Capable", (usb_io[USB] & (1 << 8)) != 0, 1);
-	print_assert("SRP Capable", (usb_io[USB] & (1 << 9)) != 0, 1);
+	if (print_assert("Operating mode (0 = HNP and SRP capable)", (usb_io[HW_SETTINGS1] >> 0) & 0b111, 0)) {
+		usb_io[USB] |= 1 << 8; // set HNP capable
+		usb_io[USB] |= 1 << 9; // set SRP capable
+		// just checkin'
+		print_assert("HNP Capable", (usb_io[USB] & (1 << 8)) != 0, 1);
+		print_assert("SRP Capable", (usb_io[USB] & (1 << 9)) != 0, 1);
+	}
 
 	usb_io[POWER] = 0; // enable all
 
@@ -94,9 +121,15 @@ void usb_init() {
 
 	usb_io[OTG_CONTROL] |= (1 << 10); // Host set HNP Enable
 
-	// TODO HDC transmit FIFO flush, HCD receive FIFO flush
-	//
-	print_pair("Host config enable DMA descriptor", (usb_io[CONFIG] & (1 << 23)) != 0); // TODO 'if' when this one is 0 (it is)
+	// HDC transmit FIFO flush, HCD receive FIFO flush
+	hcd_transmit_fifo_flush(16);
+	hcd_receive_fifo_flush();
+	
+	print_pair("Host config enable DMA descriptor", (usb_io[CONFIG] & (1 << 23)));
+	if ((usb_io[CONFIG] & (1 << 23)) == 0) {
+		// all right, no DMA for you then
+		// TODO disable channels
+	}
 	
 	usb_io[PORT] |= (1 << 12); // power = 1
 	usb_io[PORT] |= (1 << 8); // reset = true
