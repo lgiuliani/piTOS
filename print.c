@@ -48,7 +48,7 @@ void print_pair_dec(char * s, unsigned int num) {
 	print_pair_dec_on(s, num, fb_print);
 }
 
-bool print_assert_on(char * s, unsigned int num, unsigned int val, void (* print_func) (char s)) {
+void print_assert_on(char * s, unsigned int num, unsigned int val, void (* print_func) (char s)) {
 	print("ERROR: assertion failed: ", print_func);
 	print(s, print_func);
 	print(". Expected: ", print_func);

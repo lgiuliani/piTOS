@@ -72,6 +72,22 @@ unsigned int fb_init() {
 	return result;
 }
 
+void fb_cls() {
+	for (unsigned short i=0; i < framebuffer.pheight; i++) {
+		for (unsigned short j=0; j < framebuffer.pwidth; j++) {
+			fb[(i*framebuffer.pwidth)+j]=0x0000;
+		}
+	}
+	// simple way to make an interesting looking background
+	for (unsigned short i=0; i < framebuffer.pwidth; i++) {
+		for (unsigned short j=0; j < framebuffer.pheight; j++) {
+			fb[i*j]=i;
+		}
+	}
+	offsetx=0;
+	offsety=0;
+}
+
 void fb_print(char ch) {
 	if (ch < 32) {
 		if (ch == '\n') {

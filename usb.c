@@ -6,6 +6,9 @@
 
 volatile unsigned int * usb_io = (unsigned int *) (IOBASE + 0x00980000);
 
+// Most registers are 32-bit words, having fields of 1 or more bits.
+// We simply address these by word using bit-manipulation.
+
 const unsigned int OTG_CONTROL = 0x00 / 4;
 const unsigned int AHB = 0X08 / 4; // 'advanced microcontroller bus architecture (AMBA) High-performance Bus'
 const unsigned int USB = 0X0C / 4;
@@ -13,16 +16,32 @@ const unsigned int RESET = 0x10 / 4;
 const unsigned int INTERRUPT_MASK = 0x18 / 4;
 const unsigned int RECEIVE_SIZE = 0x24 / 4;
 const unsigned int NP_FIFO_START_ADDRESS_AND_DEPTH = 0x28 / 4;
+// 'Hardware' is 4 wordss long, so we split it in four.
 const unsigned int HW_DIRECTIONS = 0x44 / 4;
 const unsigned int HW_SETTINGS1 = 0x48 / 4;
 const unsigned int HW_SETTINGS2 = 0x4C / 4;
 const unsigned int HW_SETTINGS3 = 0x50 / 4;
 const unsigned int P_FIFO_START_ADDRESS_AND_DEPTH = 0x0100 / 4;
+// 'Host' / 'Channel' is more complicated, so below we define a struct for 'channel'
+const unsigned int HOST = 0x400 /4;
 const unsigned int PORT = 0x0440 / 4;
+const unsigned int HOST_CHANNELS = 0x500 / 4;
 const unsigned int CONFIG = 0x0e00 / 4;
 const unsigned int POWER = 0x0e00 / 4;
 
 const unsigned int FIFO_SIZE = 20480;
+
+// We still simply address the individual fields in the 32-bit sub-registers using bit-manipulation.
+struct channel {
+	volatile unsigned int characteristic;
+	volatile unsigned int split_control;
+	volatile unsigned int channel_interrupts;
+	volatile unsigned int channel_interrupts_mask;
+	volatile unsigned int transfer_size;
+	volatile void * dma_address;
+	volatile unsigned int reserved0;
+	volatile unsigned int reserved1;
+} __attribute__ ((__packed__));
 
 // TODO Qemu gets stuck here, likely because USB emulation is not properly enabled
 // See https://www.raspberrypi.org/forums/viewtopic.php?t=44761&p=355407
@@ -121,14 +140,41 @@ void usb_init() {
 
 	usb_io[OTG_CONTROL] |= (1 << 10); // Host set HNP Enable
 
-	// HDC transmit FIFO flush, HCD receive FIFO flush
+	// HCD transmit FIFO flush, HCD receive FIFO flush
 	hcd_transmit_fifo_flush(16);
 	hcd_receive_fifo_flush();
 	
 	print_pair("Host config enable DMA descriptor", (usb_io[CONFIG] & (1 << 23)));
 	if ((usb_io[CONFIG] & (1 << 23)) == 0) {
+
+		int host_channel_count = (usb_io[HW_SETTINGS1] >> 14) & 0b1111;
+		volatile struct channel * channels = (struct channel *) &usb_io[HOST_CHANNELS];
+		print_pair("Setting channel characteristics", host_channel_count);
+
 		// all right, no DMA for you then
-		// TODO disable channels
+		// (not that I have a clue what I'm doing here)
+		for (int ch = 0; ch < host_channel_count; ch++) {
+			volatile struct channel * channel = &channels[ch];
+			unsigned int copy = channel->characteristic;
+			copy &= ~(1<<31); // set 'enable' bit false
+			copy |= 1<<30; // set 'disable' bit true
+			copy |= 1<<15; // set 'endpoint direction' to 'in'
+			channel->characteristic = copy; // set state atomically
+		}
+
+		// Halt channels to put them into known state.
+		for (int ch = 0; ch < host_channel_count; ch++) {
+			volatile struct channel * channel = &channels[ch];
+			print_pair("Setting channel characteristics on channel", channels[ch].characteristic);
+			unsigned int copy = channel->characteristic;
+			copy |= 1<<31; // set 'enable' bit true
+			copy |= 1<<30; // set 'disable' bit true
+			copy |= 1<<15; // set 'endpoint direction' to 'in'
+			channel->characteristic = copy; // set state atomically
+			while((channel->characteristic & (1<<31)) != 0) {
+			}
+		}
+		print_pair("Done setting channel characteristics", host_channel_count);
 	}
 	
 	usb_io[PORT] |= (1 << 12); // power = 1

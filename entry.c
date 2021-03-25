@@ -25,12 +25,7 @@ void c_entry() {
 		blink(4);
 	}
 
-	// simple way to make an interesting looking background
-	for (unsigned short i=0; i < framebuffer.pwidth; i++) {
-		for (unsigned short j=0; j < framebuffer.pheight; j++) {
-			fb[i*j]=i;
-		}
-	}
+	fb_cls();
 
 	print_pair("Init result", init_result);
 
@@ -60,5 +55,9 @@ void c_entry() {
 	print_pair_dec("Core clock speed", props_4_8(GET_CLOCK_SPEED, 4));
 	print_pair_dec("Max clock speed", props_4_8(GET_MAX_CLOCK_SPEED, 4));
 	usb_init();
+	fb_cls();
+	print("Passed low-level USB initialization.\n", fb_print);
+	print("Now to write a USB keyboard driver.\n", fb_print);
+	print("Ready.\n_", fb_print);
 }
 

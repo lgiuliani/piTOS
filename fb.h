@@ -17,6 +17,7 @@ extern struct {
 extern volatile unsigned short * fb;
 
 extern unsigned int fb_init();
+extern void fb_cls();
 extern void fb_print(char ch);
 
 extern bool fixedWidth;
