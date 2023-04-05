@@ -1,7 +1,12 @@
 CC = arm-none-eabi-gcc
-CFLAGS = -Wall -mfpu=neon-vfpv4 -mfloat-abi=hard -march=armv7-a -mtune=cortex-a7 -s -g
 AS = arm-none-eabi-as
-ASFLAGS = -L -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -g
+
+CFLAGS = -Wall -mfloat-abi=hard -mfpu=neon-vfpv4 -mfloat-abi=hard -march=armv7-a -mtune=cortex-a7 -s -g
+#CFLAGS = -mfloat-abi=hard  -mfpu=neon-vfpv4 -mcpu=cortex-a7 -ffreestanding -fpic -O2 -lgcc -c -Wall -Wextra -std=gnu99 -nostartfiles
+#LDFLAGS = -ffreestanding -O2 -nostdlib -Xlinker --no-warn-rwx-segments
+#ASFLAGS = -L -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -g
+ASFLAGS = -L -mfloat-abi=hard -mfpu=neon -mcpu=cortex-a7 -g -Wall
+#ASFLAGS = -mcpu=cortex-a7 -ffreestanding -fpic -c
 
 OBJS = startup.o mailbox.o uart.o fb.o entry.o print.o blink.o props.o usb.o
 
@@ -13,4 +18,4 @@ clean:
 	rm *.o *.elf *.bin
 
 run:
-	qemu-system-arm -M raspi2 -bios drupelet.bin -serial stdio #-dtb ../raspbian/boot/bcm2709-rpi-2-b.dtb
+	qemu-system-arm  -m 1024 -M raspi2b -bios drupelet.bin -serial stdio #-dtb ../raspbian/boot/bcm2709-rpi-2-b.dtb
